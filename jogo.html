@@ -13,11 +13,6 @@
             --border-color: #c7ced6;
             --timeline-bg: #e9edf2;
             --timeline-controls-bg: #dfe5eb;
-            --timeline-ruler-bg: #eef2f6;
-            --timeline-track-bg: #ffffff;
-            --frame-cell-bg: #f8fafc;
-            --keyframe-bg: #b9c4d0;
-            --keyframe-dot: #17202a;
             --input-bg: #ffffff;
             --primary-blue: #1565c0;
             --primary-blue-dark: #0d47a1;
@@ -37,8 +32,8 @@
             border-radius: 8px;
             border: 1px solid var(--border-color);
             z-index: 100;
-            width: 320px;
-            box-shadow: 0 6px 16px rgba(0,0,0,0.4);
+            width: 330px;
+            box-shadow: 0 6px 16px rgba(0,0,0,0.3);
             backdrop-filter: blur(5px);
             display: flex;
             flex-direction: column;
@@ -69,14 +64,39 @@
             padding: 0 4px;
         }
 
+        /* NAVEGAÇÃO POR ABAS */
+        .tab-nav {
+            display: flex;
+            background: #e2e8f0;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .tab-btn {
+            flex: 1;
+            padding: 6px 4px;
+            border: none;
+            background: transparent;
+            font-size: 11px;
+            font-weight: bold;
+            color: var(--muted-text-color);
+            transition: 0.2s;
+        }
+        .tab-btn.active {
+            background: var(--panel-bg);
+            color: var(--primary-blue);
+            border-bottom: 2px solid var(--primary-blue);
+        }
+
         .panel-body {
-            padding: 8px;
+            padding: 10px;
             display: flex;
             flex-direction: column;
-            gap: 6px;
-            max-height: calc(100vh - 180px);
+            gap: 8px;
+            max-height: calc(100vh - 220px);
             overflow-y: auto;
         }
+
+        .tab-content { display: none; flex-direction: column; gap: 8px; }
+        .tab-content.active { display: flex; }
 
         .control-block { display: flex; flex-direction: column; gap: 2px; font-size: 11px; }
 
@@ -218,6 +238,14 @@
             display: none;
             z-index: 200;
         }
+
+        .btn-action {
+            border: none;
+            border-radius: 4px;
+            padding: 6px;
+            font-weight: bold;
+            color: white;
+        }
     </style>
 </head>
 <body>
@@ -266,6 +294,149 @@
     </div>
 </div>
 
+<!-- Janela Flutuante Principal Organizada em Abas -->
+<div class="floating-panel" id="main-panel" style="top: 10px; left: 10px;">
+    <div class="panel-header" onmousedown="startDrag(event, 'main-panel')">
+        <span>⚙️ NicEman Studio - Painel Geral</span>
+        <button class="minimize-btn" onclick="toggleMinimize('main-panel')">_</button>
+    </div>
+    
+    <!-- Botão de Ação Rápida: Centralizar Cena -->
+    <div style="padding: 6px 10px 0 10px;">
+        <button id="btn-recenter-scene" class="btn-action" style="background: #0288d1; width: 100%;">🎯 Centralizar Cena / Foco</button>
+    </div>
+
+    <!-- Navegação por Abas -->
+    <div class="tab-nav" style="margin-top: 6px;">
+        <button class="tab-btn active" onclick="switchTab('tab-files', this)">📁 Arquivos</button>
+        <button class="tab-btn" onclick="switchTab('tab-controls', this)">🎮 Controles</button>
+        <button class="tab-btn" onclick="switchTab('tab-view', this)">👁️ Visualização</button>
+    </div>
+
+    <div class="panel-body">
+        <!-- ABA 1: ARQUIVOS & MODELO -->
+        <div id="tab-files" class="tab-content active">
+            <div class="control-block">
+                <label>1. Modelo 3D Personagem (FBX/GLTF/OBJ):</label>
+                <input type="file" id="file-input" accept=".obj, .fbx, .gltf, .glb">
+                <span id="model-status" class="status-text">Nenhum modelo carregado.</span>
+            </div>
+            <button id="btn-open-scale-modal" class="btn-action" style="background: #388e3c;">📐 Redefinir Escala do Modelo</button>
+            
+            <div class="control-block">
+                <label>2. Textura / Imagem (PNG/JPG):</label>
+                <input type="file" id="texture-input" accept=".png, .jpg, .jpeg">
+            </div>
+            
+            <div class="control-block">
+                <label>3. Adicionar Animações FBX:</label>
+                <input type="file" id="anim-files-input" accept=".fbx, .gltf, .glb" multiple>
+            </div>
+            
+            <div class="control-block">
+                <label>Animações Carregadas:</label>
+                <select id="animation-list">
+                    <option value="">Nenhuma animação disponível</option>
+                </select>
+            </div>
+            
+            <button id="btn-open-preview" class="btn-action" style="background: var(--primary-blue);">🔍 Abrir Janela de Teste</button>
+            <button id="btn-toggle-game" class="btn-action" style="background: #2e7d32; margin-top: 4px;">🎮 Play / Testar Jogo</button>
+        </div>
+
+        <!-- ABA 2: CONTROLES & MAPEAMENTO -->
+        <div id="tab-controls" class="tab-content">
+            <span class="status-text">Controles para SETAS DO TECLADO:</span>
+            
+            <div class="control-block" style="background: var(--timeline-bg); padding: 4px; border-radius: 4px;">
+                <label>Idle (Sem Tecla):</label>
+                <select id="anim-idle"><option value="">(Sem Animação)</option></select>
+            </div>
+            
+            <div class="control-block">
+                <label>Frente (Seta Cima):</label>
+                <div style="display: flex; gap: 4px;">
+                    <input type="text" id="key-forward" value="ArrowUp" readonly style="width: 70px; background: #eee;">
+                    <select id="anim-forward" style="flex:1;"><option value="">(Sem Animação)</option></select>
+                </div>
+            </div>
+            
+            <div class="control-block">
+                <label>Trás (Seta Baixo):</label>
+                <div style="display: flex; gap: 4px;">
+                    <input type="text" id="key-backward" value="ArrowDown" readonly style="width: 70px; background: #eee;">
+                    <select id="anim-backward" style="flex:1;"><option value="">(Sem Animação)</option></select>
+                </div>
+            </div>
+            
+            <div class="control-block">
+                <label>Ação / Pulo (Espaço):</label>
+                <div style="display: flex; gap: 4px;">
+                    <input type="text" id="key-space" value="Space" readonly style="width: 70px; background: #eee;">
+                    <select id="anim-space" style="flex:1;"><option value="">(Sem Animação)</option></select>
+                </div>
+            </div>
+            
+            <div class="slider-row" style="margin-top: 4px;">
+                <label>Velocidade Movimento:</label>
+                <input type="range" id="move-speed-slider" min="0.5" max="10.0" step="0.5" value="3.0">
+            </div>
+            
+            <div class="slider-row">
+                <label>Velocidade Rotação:</label>
+                <input type="range" id="rot-speed-slider" min="0.01" max="0.1" step="0.01" value="0.04">
+            </div>
+        </div>
+
+        <!-- ABA 3: VISUALIZAÇÃO & CÂMERA -->
+        <div id="tab-view" class="tab-content">
+            <div class="checkbox-row">
+                <input type="checkbox" id="chk-skeleton" checked>
+                <label for="chk-skeleton">Exibir Esqueleto / Helpers</label>
+            </div>
+            <div class="checkbox-row">
+                <input type="checkbox" id="chk-pickers" checked>
+                <label for="chk-pickers">Exibir Juntas Interativas</label>
+            </div>
+            <div class="checkbox-row">
+                <input type="checkbox" id="chk-camera-follow" checked>
+                <label for="chk-camera-follow">Câmera Seguir Personagem</label>
+            </div>
+            <div class="checkbox-row">
+                <input type="checkbox" id="chk-show-camera-gizmo" checked>
+                <label for="chk-show-camera-gizmo">Exibir Gizmo 3D Câmera</label>
+            </div>
+            
+            <hr style="border:0; border-top:1px solid var(--border-color); margin: 4px 0;">
+            <span class="status-text" style="font-weight:bold;">📷 Ajustes de Offset da Câmera</span>
+            
+            <div class="slider-row">
+                <div style="display:flex; justify-content: space-between;">
+                    <label>Posição X (Lateral):</label>
+                    <span id="cam-x-val" style="font-weight:bold;">0</span>
+                </div>
+                <input type="range" id="cam-x-slider" min="-100" max="100" step="1" value="0">
+            </div>
+            
+            <div class="slider-row">
+                <div style="display:flex; justify-content: space-between;">
+                    <label>Distância:</label>
+                    <span id="cam-dist-val" style="font-weight:bold;">70</span>
+                </div>
+                <input type="range" id="cam-distance-slider" min="10" max="300" step="1" value="70">
+            </div>
+            
+            <div class="slider-row">
+                <div style="display:flex; justify-content: space-between;">
+                    <label>Altura:</label>
+                    <span id="cam-height-val" style="font-weight:bold;">35</span>
+                </div>
+                <input type="range" id="cam-height-slider" min="-20" max="150" step="1" value="35">
+            </div>
+        </div>
+    </div>
+</div>
+
 <div class="floating-panel" id="preview-window-panel">
     <div class="panel-header" onmousedown="startDrag(event, 'preview-window-panel')">
         <span>🎬 Janela de Teste de Animação</span>
@@ -282,136 +453,6 @@
         </div>
         <div id="preview-canvas-container"></div>
         <span class="status-text">Mini visualização isolada da animação selecionada.</span>
-    </div>
-</div>
-
-<div class="floating-panel" id="panel-file" style="top: 10px; left: 10px;">
-    <div class="panel-header" onmousedown="startDrag(event, 'panel-file')">
-        <span>📁 Arquivos, Modelo e Textura</span>
-        <button class="minimize-btn" onclick="toggleMinimize('panel-file')">_</button>
-    </div>
-    <div class="panel-body">
-        <div class="control-block">
-            <label>1. Carregar Modelo 3D Personagem (FBX/GLTF/OBJ):</label>
-            <input type="file" id="file-input" accept=".obj, .fbx, .gltf, .glb">
-            <span id="model-status" class="status-text">Nenhum modelo carregado.</span>
-        </div>
-        <button id="btn-open-scale-modal" style="background: #388e3c; color: white; font-weight: bold; margin-top: 2px; padding: 5px;">📐 Redefinir Escala do Modelo</button>
-        <div class="control-block" style="margin-top: 2px;">
-            <label>2. Carregar Textura / Imagem (PNG/JPG):</label>
-            <input type="file" id="texture-input" accept=".png, .jpg, .jpeg">
-        </div>
-        <div class="control-block" style="margin-top: 2px;">
-            <label>3. Adicionar Animações FBX:</label>
-            <input type="file" id="anim-files-input" accept=".fbx, .gltf, .glb" multiple>
-        </div>
-        <div class="control-block" style="margin-top: 4px;">
-            <label>Lista de Animações na Memória:</label>
-            <select id="animation-list">
-                <option value="">Nenhuma animação disponível</option>
-            </select>
-        </div>
-        <button id="btn-open-preview" style="background: var(--primary-blue); color: white; font-weight: bold; margin-top: 4px; padding: 5px;">🔍 Abrir Janela de Teste</button>
-        <button id="btn-toggle-game" style="background: #2e7d32; color: white; font-weight: bold; margin-top: 4px; padding: 6px;">🎮 Play / Testar Jogo</button>
-    </div>
-</div>
-
-<div class="floating-panel" id="panel-controls-config" style="top: 10px; left: 340px;">
-    <div class="panel-header" onmousedown="startDrag(event, 'panel-controls-config')">
-        <span>🎮 Controles & Mapeamento de Teclas</span>
-        <button class="minimize-btn" onclick="toggleMinimize('panel-controls-config')">_</button>
-    </div>
-    <div class="panel-body">
-        <span class="status-text">Controles configurados para as SETAS DO TECLADO:</span>
-        <div class="control-block" style="background: var(--timeline-bg); padding: 4px; border-radius: 4px;">
-            <label>Sem Tecla Pressionada (Idle):</label>
-            <select id="anim-idle"><option value="">(Sem Animação)</option></select>
-        </div>
-        <div class="control-block">
-            <label>Mover para Frente (Seta Para Cima):</label>
-            <div style="display: flex; gap: 4px;">
-                <input type="text" id="key-forward" value="ArrowUp" readonly style="width: 70px; background: #eee;">
-                <select id="anim-forward" style="flex:1;"><option value="">(Sem Animação)</option></select>
-            </div>
-        </div>
-        <div class="control-block">
-            <label>Mover para Trás (Seta Para Baixo):</label>
-            <div style="display: flex; gap: 4px;">
-                <input type="text" id="key-backward" value="ArrowDown" readonly style="width: 70px; background: #eee;">
-                <select id="anim-backward" style="flex:1;"><option value="">(Sem Animação)</option></select>
-            </div>
-        </div>
-        <div class="control-block">
-            <label>Girar Esquerda (Seta Para Esquerda):</label>
-            <input type="text" id="key-left" value="ArrowLeft" readonly style="background: #eee;">
-        </div>
-        <div class="control-block">
-            <label>Girar Direita (Seta Para Direita):</label>
-            <input type="text" id="key-right" value="ArrowRight" readonly style="background: #eee;">
-        </div>
-        <div class="control-block">
-            <label>Ação / Pulo (Espaço):</label>
-            <div style="display: flex; gap: 4px;">
-                <input type="text" id="key-space" value="Space" readonly style="width: 70px; background: #eee;">
-                <select id="anim-space" style="flex:1;"><option value="">(Sem Animação)</option></select>
-            </div>
-        </div>
-        <div class="slider-row" style="margin-top: 4px;">
-            <label>Velocidade de Movimento:</label>
-            <input type="range" id="move-speed-slider" min="0.5" max="10.0" step="0.5" value="3.0">
-        </div>
-        <div class="slider-row">
-            <label>Velocidade de Rotação:</label>
-            <input type="range" id="rot-speed-slider" min="0.01" max="0.1" step="0.01" value="0.04">
-        </div>
-    </div>
-</div>
-
-<div class="floating-panel" id="panel-render" style="top: 10px; left: 675px;">
-    <div class="panel-header" onmousedown="startDrag(event, 'panel-render')">
-        <span>👁️ Visualização e Configurações</span>
-        <button class="minimize-btn" onclick="toggleMinimize('panel-render')">_</button>
-    </div>
-    <div class="panel-body">
-        <div class="checkbox-row">
-            <input type="checkbox" id="chk-skeleton" checked>
-            <label for="chk-skeleton">Exibir Esqueleto / Helpers</label>
-        </div>
-        <div class="checkbox-row">
-            <input type="checkbox" id="chk-pickers" checked>
-            <label for="chk-pickers">Exibir Juntas Interativas</label>
-        </div>
-        <div class="checkbox-row">
-            <input type="checkbox" id="chk-camera-follow" checked>
-            <label for="chk-camera-follow">Câmera Seguir o Personagem</label>
-        </div>
-        <div class="checkbox-row">
-            <input type="checkbox" id="chk-show-camera-gizmo" checked>
-            <label for="chk-show-camera-gizmo">Exibir Gizmo 3D da Câmera</label>
-        </div>
-        <hr style="border:0; border-top:1px solid var(--border-color); margin: 4px 0;">
-        <span class="status-text" style="font-weight:bold;">📷 Ajustes da Câmera do Personagem</span>
-        <div class="slider-row">
-            <div style="display:flex; justify-content: space-between;">
-                <label>Posição X (Offset Lateral):</label>
-                <span id="cam-x-val" style="margin-left:auto; font-weight:bold;">0</span>
-            </div>
-            <input type="range" id="cam-x-slider" min="-100" max="100" step="1" value="0">
-        </div>
-        <div class="slider-row">
-            <div style="display:flex; justify-content: space-between;">
-                <label>Distância da Câmera:</label>
-                <span id="cam-dist-val" style="margin-left:auto; font-weight:bold;">70</span>
-            </div>
-            <input type="range" id="cam-distance-slider" min="10" max="300" step="1" value="70">
-        </div>
-        <div class="slider-row">
-            <div style="display:flex; justify-content: space-between;">
-                <label>Altura da Câmera:</label>
-                <span id="cam-height-val" style="margin-left:auto; font-weight:bold;">35</span>
-            </div>
-            <input type="range" id="cam-height-slider" min="-20" max="150" step="1" value="35">
-        </div>
     </div>
 </div>
 
@@ -448,10 +489,21 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 });
 
+function switchTab(tabId, btnElement) {
+    document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+    
+    document.getElementById(tabId).classList.add('active');
+    btnElement.classList.add('active');
+}
+
 function toggleMinimize(panelId) {
     const panel = document.getElementById(panelId);
     const body = panel.querySelector('.panel-body');
-    body.style.display = (body.style.display === 'none') ? 'flex' : 'none';
+    const tabNav = panel.querySelector('.tab-nav');
+    const display = (body.style.display === 'none') ? 'flex' : 'none';
+    body.style.display = display;
+    if (tabNav) tabNav.style.display = display;
 }
 
 let activeDragPanel = null;
@@ -537,12 +589,28 @@ scene.add(dirLight);
 let cameraOffsetX = 0;
 let cameraDistance = 70;
 let cameraHeight = 35;
-let characterHeight = 18; // Altura calculada do modelo para ajustar o ponto de vista da câmara
+let characterHeight = 18;
 
-// PIVÔ PAI DO PERSONAGEM (Garante sincronização permanente de posição e rotação)
+// PIVÔ PAI DO PERSONAGEM
 const characterPivotGroup = new THREE.Group();
 characterPivotGroup.position.set(0, 0, 0);
 scene.add(characterPivotGroup);
+
+// BOTÃO CENTRALIZAR CENA / FOCO
+document.getElementById('btn-recenter-scene').addEventListener('click', () => {
+    recenterCameraOnCharacter();
+});
+
+function recenterCameraOnCharacter() {
+    characterPivotGroup.updateMatrixWorld(true);
+    const targetFocus = getCharacterTargetFocus();
+    const offset = getCameraOffsetVector();
+    const desiredCameraPos = characterPivotGroup.localToWorld(offset.clone());
+
+    camera.position.copy(desiredCameraPos);
+    orbit.target.copy(targetFocus);
+    orbit.update();
+}
 
 // 2. CONSTRUÇÃO DA CIDADE
 function buildProceduralCity() {
@@ -853,7 +921,7 @@ if (btnPlayAnim) {
 function toggleGameMode() {
     isGameMode = !isGameMode;
     const timeline = document.getElementById('flash-timeline-container');
-    const panels = document.querySelectorAll('.floating-panel');
+    const mainPanel = document.getElementById('main-panel');
     const indicator = document.getElementById('game-mode-indicator');
 
     if (isGameMode) {
@@ -869,7 +937,7 @@ function toggleGameMode() {
         }
 
         timeline.style.transform = 'translateY(120px)';
-        panels.forEach(p => { if (p.id !== 'panel-file') p.style.display = 'none'; });
+        mainPanel.style.display = 'none';
         indicator.style.display = 'block';
         btnToggleGame.innerText = '⏹ Parar Jogo';
         btnToggleGame.style.background = '#c62828';
@@ -878,7 +946,7 @@ function toggleGameMode() {
         if (cameraGizmoGroup) cameraGizmoGroup.visible = false;
     } else {
         timeline.style.transform = 'translateY(0)';
-        panels.forEach(p => p.style.display = 'flex');
+        mainPanel.style.display = 'flex';
         indicator.style.display = 'none';
         btnToggleGame.innerText = '🎮 Play / Testar Jogo';
         btnToggleGame.style.background = '#2e7d32';
@@ -932,7 +1000,6 @@ btnScaleApply.addEventListener('click', () => {
     if (!isNaN(sx) && !isNaN(sy) && !isNaN(sz) && sx > 0 && sy > 0 && sz > 0) {
         characterGroup.scale.set(sx, sy, sz);
         
-        // Recalcular a caixa de limites do modelo ajustado
         const box = new THREE.Box3().setFromObject(characterGroup);
         characterHeight = box.max.y - box.min.y;
 
@@ -947,7 +1014,6 @@ function fitModelToTargetHeight(model, targetHeight = 18) {
     model.position.set(0, 0, 0);
     model.updateMatrixWorld(true);
 
-    // Ajustar a origem do objeto para a base (pés)
     const box = new THREE.Box3().setFromObject(model);
     const size = new THREE.Vector3();
     box.getSize(size);
@@ -956,7 +1022,6 @@ function fitModelToTargetHeight(model, targetHeight = 18) {
         const scaleFactor = targetHeight / size.y;
         model.scale.setScalar(scaleFactor);
 
-        // Reposicionar para garantir que os pés fiquem no plano do chão local do pivô (Y = 0)
         const updatedBox = new THREE.Box3().setFromObject(model);
         model.position.y = -updatedBox.min.y;
 
@@ -1107,6 +1172,7 @@ function processLoadedModel(model, name, anims) {
     }
 
     applyCameraSettings();
+    recenterCameraOnCharacter();
 }
 
 function fixMaterial(mat) {
