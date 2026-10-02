@@ -308,7 +308,7 @@
 <!-- BARRA DE NAVEGAÇÃO ENTRE TELAS -->
 <div id="screen-nav">
     <button class="nav-btn active" onclick="switchScreen('game-screen')">🎮 Jogo / Estúdio</button>
-    <button class="nav-btn" onclick="switchScreen('editor-screen')">🏗️️ Criador de Cidade</button>
+    <button class="nav-btn" onclick="switchScreen('editor-screen')">🏗 Criador de Cidade</button>
 </div>
 
 <!-- TELA 1: JOGO / ESTÚDIO DE ANIMAÇÃO -->
@@ -359,7 +359,7 @@
     <!-- Painel Principal -->
     <div class="floating-panel" id="main-panel" style="top: 50px; left: 10px;">
         <div class="panel-header" onmousedown="startDrag(event, 'main-panel')">
-            <span>⚙️ NicEman Studio - Painel Geral</span>
+            <span>⚙ NicEman Studio - Painel Geral</span>
             <button class="minimize-btn" onclick="toggleMinimize('main-panel')">_</button>
         </div>
         
@@ -401,8 +401,13 @@
                 </div>
 
                 <div class="control-block" style="margin-top: 4px; background: var(--primary-blue-light); padding: 6px; border-radius: 4px;">
-                    <label style="font-weight: bold; color: var(--primary-blue-dark);">🏙️ Cidade Carregada:</label>
+                    <label style="font-weight: bold; color: var(--primary-blue-dark);">🏙️ Cidade no Jogo:</label>
                     <span id="city-source-label" class="status-text" style="font-size: 11px; font-weight: bold;">Cidade Padrão Procedural</span>
+                    <div style="display: flex; gap: 4px; margin-top: 4px;">
+                        <button id="btn-load-saved-city" class="btn-action" style="background: #1565c0; font-size: 10px; flex: 1;">📂 Carregar Salva (localStorage)</button>
+                        <button id="btn-import-city-json" class="btn-action" style="background: #7b1fa2; font-size: 10px; flex: 1;">📄 Importar JSON</button>
+                    </div>
+                    <input type="file" id="file-input-city-json" accept=".json" style="display: none;">
                 </div>
                 
                 <button id="btn-open-preview" class="btn-action" style="background: var(--primary-blue); margin-top: 4px;">🔍 Abrir Janela de Teste</button>
@@ -544,20 +549,32 @@
             <button class="minimize-btn" onclick="toggleMinimize('editor-panel')">_</button>
         </div>
         <div class="panel-body">
-            <span class="status-text">Selecione um elemento e clique no terreno para posicionar:</span>
+            <span class="status-text">Selecione uma ferramenta e interaja com o terreno:</span>
             
             <div class="editor-tools">
-                <button class="tool-btn active" data-tool="road">🛣️ Pista / Rua</button>
+                <button class="tool-btn active" data-tool="road-line">✏️ Tracejar Linha de Pista</button>
+                <button class="tool-btn" data-tool="road">🛣️ Pista Individual</button>
+                <button class="tool-btn" data-tool="move">✋ Mover Objeto</button>
+                <button class="tool-btn" data-tool="rotate">🔄 Girar (Teclas R/Espaço)</button>
+                <button class="tool-btn" data-tool="scale">📐 Redimensionar</button>
                 <button class="tool-btn" data-tool="tree">🌲 Árvore</button>
                 <button class="tool-btn" data-tool="building-small">🏠 Prédio Baixo</button>
                 <button class="tool-btn" data-tool="building-tall">🏢 Arranha-Céu</button>
                 <button class="tool-btn" data-tool="light">💡 Poste de Luz</button>
-                <button class="tool-btn" data-tool="eraser" style="color: #c62828;">❌ Borracha</button>
+                <button class="tool-btn" data-tool="eraser" style="color: #c62828; grid-column: span 2;">❌ Borracha / Remover</button>
+            </div>
+
+            <!-- INFORMAÇÃO DA PISTA -->
+            <div id="road-stripe-controls" class="control-block" style="background: #e3f2fd; border: 1px solid #90caf9; padding: 6px; border-radius: 4px; margin-top: 4px;">
+                <label style="font-weight: bold; color: #1565c0;">🛣️ Posicionamento Manual:</label>
+                <span class="status-text" style="margin-top: 2px;">Clique esquerdo para adicionar/confirmar. Clique direito cancela a movimentação. Pressione R ou Espaço para girar.</span>
             </div>
 
             <hr style="border:0; border-top:1px solid var(--border-color); margin: 4px 0;">
 
-            <button id="btn-save-city" class="btn-action" style="background: #2e7d32;">💾 Salvar Cidade Criada</button>
+            <button id="btn-undo-city" class="btn-action" style="background: #e65100;">↩️ Desfazer (Undo)</button>
+            <button id="btn-save-city" class="btn-action" style="background: #2e7d32;">💾 Salvar no LocalStorage</button>
+            <button id="btn-export-city-json" class="btn-action" style="background: #7b1fa2;">📥 Baixar Arquivo JSON</button>
             <button id="btn-clear-city" class="btn-action" style="background: #c62828;">🗑️ Limpar Tudo</button>
             <button id="btn-apply-city-to-game" class="btn-action" style="background: #1565c0; margin-top: 6px;">🎮 Salvar e Jogar Nela</button>
 
@@ -731,7 +748,7 @@ function recenterCameraOnCharacter() {
 }
 
 // ==========================================
-// 2. CONSTRUÇÃO DA CIDADE (PROCEDURAL OU PERSONALIZADA)
+// 2. CONSTRUÇÃO DA CIDADE
 // ==========================================
 function buildProceduralCity() {
     cityGroup.clear();
@@ -743,34 +760,18 @@ function buildProceduralCity() {
     ground.receiveShadow = true;
     cityGroup.add(ground);
 
-    const roadMat = new THREE.MeshStandardMaterial({ color: 0x333333, roughness: 0.8 });
-    const stripeMat = new THREE.MeshBasicMaterial({ color: 0xffeb3b });
-
-    function createRoad(width, length, x, z, isRotated = false) {
-        const roadGeo = new THREE.PlaneGeometry(width, length);
-        const road = new THREE.Mesh(roadGeo, roadMat);
-        road.rotation.x = -Math.PI / 2;
-        if (isRotated) road.rotation.z = Math.PI / 2;
-        road.position.set(x, 0.1, z);
-        road.receiveShadow = true;
+    // Gerar malha de pistas padrão
+    for (let x = -200; x <= 200; x += 20) {
+        const road = buildStraightRoadMesh();
+        road.position.set(x, 0, 0);
         cityGroup.add(road);
-
-        const numStripes = Math.floor(length / 20);
-        for (let i = 0; i < numStripes; i++) {
-            const stripeGeo = new THREE.PlaneGeometry(isRotated ? 10 : 1.5, isRotated ? 1.5 : 10);
-            const stripe = new THREE.Mesh(stripeGeo, stripeMat);
-            stripe.rotation.x = -Math.PI / 2;
-            const offset = -length / 2 + (i * 20) + 10;
-            if (isRotated) stripe.position.set(x + offset, 0.2, z);
-            else stripe.position.set(x, 0.2, z + offset);
-            cityGroup.add(stripe);
-        }
     }
-
-    createRoad(40, 1000, 0, 0, false);
-    createRoad(40, 1000, 0, 0, true);
-    createRoad(30, 1000, -250, 0, false);
-    createRoad(30, 1000, 250, 0, false);
+    for (let z = -200; z <= 200; z += 20) {
+        if (z === 0) continue;
+        const road = buildStraightRoadMesh();
+        road.position.set(0, 0, z);
+        cityGroup.add(road);
+    }
 
     const buildingColors = [0x1e88e5, 0xe53935, 0x43a047, 0xfdd835, 0x8e24aa];
     function createBuildingBlock(centerX, centerZ) {
@@ -789,20 +790,13 @@ function buildProceduralCity() {
 
     const blockCoords = [[-135, -135], [135, -135], [-135, 135], [135, 135]];
     blockCoords.forEach(([bx, bz]) => createBuildingBlock(bx, bz));
+
+    document.getElementById('city-source-label').innerText = "Cidade Padrão Procedural";
 }
 
-function loadCityIntoGame() {
-    const savedData = localStorage.getItem('custom_city_data');
-    if (!savedData) {
-        buildProceduralCity();
-        document.getElementById('city-source-label').innerText = "Cidade Padrão Procedural";
-        return;
-    }
-
-    const cityElements = JSON.parse(savedData);
+function loadCityFromData(cityElements, sourceName = "Cidade Personalizada") {
     if (!Array.isArray(cityElements) || cityElements.length === 0) {
         buildProceduralCity();
-        document.getElementById('city-source-label').innerText = "Cidade Padrão Procedural";
         return;
     }
 
@@ -816,18 +810,76 @@ function loadCityIntoGame() {
     cityGroup.add(ground);
 
     cityElements.forEach(item => {
-        const mesh = createCityMeshObject(item.type);
+        const mesh = item.type === 'road' ? buildStraightRoadMesh() : createCityMeshObject(item.type);
         if (mesh) {
-            mesh.position.set(item.x, item.y, item.z);
+            mesh.position.set(item.x, item.y || 0, item.z);
+            if (item.rotationY !== undefined) mesh.rotation.y = item.rotationY;
+            if (item.scaleX !== undefined) mesh.scale.set(item.scaleX, item.scaleY || 1, item.scaleZ || item.scaleX);
             cityGroup.add(mesh);
         }
     });
 
-    document.getElementById('city-source-label').innerText = `Cidade Personalizada (${cityElements.length} objetos)`;
+    document.getElementById('city-source-label').innerText = `${sourceName} (${cityElements.length} objetos)`;
+}
+
+// Botões para carregar cidade salva via localStorage ou JSON
+document.getElementById('btn-load-saved-city').addEventListener('click', () => {
+    const savedData = localStorage.getItem('custom_city_data');
+    if (savedData) {
+        loadCityFromData(JSON.parse(savedData), "Cidade Salva (localStorage)");
+    } else {
+        alert("Nenhuma cidade salva encontrada no localStorage.");
+    }
+});
+
+document.getElementById('btn-import-city-json').addEventListener('click', () => {
+    document.getElementById('file-input-city-json').click();
+});
+
+document.getElementById('file-input-city-json').addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+        try {
+            const cityData = JSON.parse(event.target.result);
+            loadCityFromData(cityData, `JSON: ${file.name}`);
+        } catch (err) {
+            alert("Erro ao ler o arquivo JSON de cidade.");
+        }
+    };
+    reader.readAsText(file);
+});
+
+// ==========================================
+// 3. GERADOR DE PISTA RETILÍNEA SIMPLES
+// ==========================================
+function buildStraightRoadMesh() {
+    const group = new THREE.Group();
+
+    // Asfalto elevado para evitar z-fighting (y=0.05)
+    const roadGeo = new THREE.PlaneGeometry(20, 20);
+    const roadMat = new THREE.MeshStandardMaterial({ color: 0x333333, roughness: 0.8 });
+    const road = new THREE.Mesh(roadGeo, roadMat);
+    road.rotation.x = -Math.PI / 2;
+    road.position.y = 0.05;
+    road.receiveShadow = true;
+    group.add(road);
+
+    // Faixa amarela simples elevada (y=0.1)
+    const yellowMat = new THREE.MeshBasicMaterial({ color: 0xffeb3b });
+    const stripeGeo = new THREE.PlaneGeometry(20, 1.8);
+    const stripe = new THREE.Mesh(stripeGeo, yellowMat);
+    stripe.rotation.x = -Math.PI / 2;
+    stripe.position.y = 0.1;
+    group.add(stripe);
+
+    group.userData = { type: 'road' };
+    return group;
 }
 
 // ==========================================
-// 3. EDITOR DE CIDADE (TELA E LÓGICA)
+// 4. EDITOR DE CIDADE COM AÇÕES AVANÇADAS (MOVE/ROTATE/SCALE/UNDO)
 // ==========================================
 const editorContainer = document.getElementById('editor-screen');
 const editorScene = new THREE.Scene();
@@ -850,7 +902,6 @@ edDirLight.position.set(200, 400, 200);
 edDirLight.castShadow = true;
 editorScene.add(edDirLight);
 
-// Chão e Grade do Editor
 const editorGroundGeo = new THREE.PlaneGeometry(1200, 1200);
 const editorGroundMat = new THREE.MeshStandardMaterial({ color: 0x557a2b, roughness: 0.9 });
 const editorGround = new THREE.Mesh(editorGroundGeo, editorGroundMat);
@@ -865,37 +916,63 @@ editorScene.add(gridHelper);
 const editorObjectsGroup = new THREE.Group();
 editorScene.add(editorObjectsGroup);
 
-let currentSelectedTool = 'road';
+let currentSelectedTool = 'road-line';
 let customCityData = [];
 
-// FERRAMENTAS DO EDITOR
+// PILHA DE UNDO (HISTÓRICO DE ESTADOS)
+let undoHistory = [];
+
+function pushUndoState() {
+    saveEditorStateToMemory();
+    undoHistory.push(JSON.stringify(customCityData));
+    if (undoHistory.length > 30) undoHistory.shift(); // Limite do histórico
+}
+
+function undoLastAction() {
+    if (undoHistory.length > 0) {
+        const lastState = undoHistory.pop();
+        customCityData = JSON.parse(lastState);
+        editorObjectsGroup.clear();
+        customCityData.forEach(item => {
+            const mesh = item.type === 'road' ? buildStraightRoadMesh() : createCityMeshObject(item.type);
+            if (mesh) {
+                mesh.position.set(item.x, item.y || 0, item.z);
+                if (item.rotationY !== undefined) mesh.rotation.y = item.rotationY;
+                if (item.scaleX !== undefined) mesh.scale.set(item.scaleX, item.scaleY || 1, item.scaleZ || item.scaleX);
+                editorObjectsGroup.add(mesh);
+            }
+        });
+        const statusEl = document.getElementById('editor-status');
+        statusEl.innerText = "↩ Action Undone!";
+        setTimeout(() => statusEl.innerText = "", 2000);
+    }
+}
+
+document.getElementById('btn-undo-city').addEventListener('click', undoLastAction);
+
+// Guia Visual da Linha Traçada
+let linePreviewGeo = new THREE.BufferGeometry();
+let linePreviewMat = new THREE.LineBasicMaterial({ color: 0xffeb3b, linewidth: 3 });
+let linePreviewMesh = new THREE.Line(linePreviewGeo, linePreviewMat);
+linePreviewMesh.visible = false;
+editorScene.add(linePreviewMesh);
+
 document.querySelectorAll('.tool-btn').forEach(btn => {
     btn.addEventListener('click', (e) => {
         document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
         currentSelectedTool = btn.getAttribute('data-tool');
+        if (currentSelectedTool !== 'road-line') {
+            linePreviewMesh.visible = false;
+        }
+        if (movingObject) cancelMovingObject();
     });
 });
 
-// FACTORY DE OBJETOS DA CIDADE
 function createCityMeshObject(type) {
     const group = new THREE.Group();
 
-    if (type === 'road') {
-        const roadGeo = new THREE.PlaneGeometry(20, 20);
-        const roadMat = new THREE.MeshStandardMaterial({ color: 0x333333, roughness: 0.8 });
-        const road = new THREE.Mesh(roadGeo, roadMat);
-        road.rotation.x = -Math.PI / 2;
-        group.add(road);
-
-        const stripeGeo = new THREE.PlaneGeometry(2, 6);
-        const stripeMat = new THREE.MeshBasicMaterial({ color: 0xffeb3b });
-        const stripe = new THREE.Mesh(stripeGeo, stripeMat);
-        stripe.rotation.x = -Math.PI / 2;
-        stripe.position.y = 0.1;
-        group.add(stripe);
-    } 
-    else if (type === 'tree') {
+    if (type === 'tree') {
         const trunkGeo = new THREE.CylinderGeometry(1, 1.5, 8, 8);
         const trunkMat = new THREE.MeshStandardMaterial({ color: 0x5d4037 });
         const trunk = new THREE.Mesh(trunkGeo, trunkMat);
@@ -946,56 +1023,310 @@ function createCityMeshObject(type) {
     return group;
 }
 
-// RAYCASTING NO EDITOR PARA COLOCAR OBJETOS
+// INTERAÇÃO DO MOUSE NO EDITOR
 const raycaster = new THREE.Raycaster();
 const mouse = new THREE.Vector2();
 
-editorRenderer.domElement.addEventListener('pointerdown', (e) => {
-    if (e.target !== editorRenderer.domElement) return;
+let isDrawingLine = false;
+let startSnapX = 0;
+let startSnapZ = 0;
 
+// Variáveis para Manipulação de Objetos (Mover, Rotacionar, Escalar)
+let movingObject = null;
+let originalPosition = null;
+let isScaling = false;
+let scaleStartPoint = new THREE.Vector3();
+let scaleStartValue = new THREE.Vector3();
+
+function getGroundIntersectPoint(e) {
     const rect = editorRenderer.domElement.getBoundingClientRect();
     mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
     mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
 
     raycaster.setFromCamera(mouse, editorCamera);
+    const intersects = raycaster.intersectObject(editorGround);
+    return intersects.length > 0 ? intersects[0].point : null;
+}
 
-    if (currentSelectedTool === 'eraser') {
-        const intersects = raycaster.intersectObjects(editorObjectsGroup.children, true);
-        if (intersects.length > 0) {
-            let rootObj = intersects[0].object;
-            while (rootObj.parent && rootObj.parent !== editorObjectsGroup) {
-                rootObj = rootObj.parent;
-            }
-            editorObjectsGroup.remove(rootObj);
-            saveEditorStateToMemory();
+function getIntersectedObject(e) {
+    const rect = editorRenderer.domElement.getBoundingClientRect();
+    mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+    mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+
+    raycaster.setFromCamera(mouse, editorCamera);
+    const intersects = raycaster.intersectObjects(editorObjectsGroup.children, true);
+    if (intersects.length > 0) {
+        let rootObj = intersects[0].object;
+        while (rootObj.parent && rootObj.parent !== editorObjectsGroup) {
+            rootObj = rootObj.parent;
+        }
+        return rootObj;
+    }
+    return null;
+}
+
+function removeObjectAtSnap(snapX, snapZ) {
+    for (let i = editorObjectsGroup.children.length - 1; i >= 0; i--) {
+        const child = editorObjectsGroup.children[i];
+        if (Math.abs(child.position.x - snapX) < 1 && Math.abs(child.position.z - snapZ) < 1) {
+            editorObjectsGroup.remove(child);
+        }
+    }
+}
+
+function createRoadLine(x1, z1, x2, z2) {
+    pushUndoState();
+    const dx = x2 - x1;
+    const dz = z2 - z1;
+
+    if (Math.abs(dx) >= Math.abs(dz)) {
+        const start = Math.min(x1, x2);
+        const end = Math.max(x1, x2);
+        for (let x = start; x <= end; x += 20) {
+            removeObjectAtSnap(x, z1);
+            const roadMesh = buildStraightRoadMesh();
+            roadMesh.position.set(x, 0, z1);
+            editorObjectsGroup.add(roadMesh);
         }
     } else {
-        const intersects = raycaster.intersectObject(editorGround);
-        if (intersects.length > 0) {
-            const pt = intersects[0].point;
-            
-            // Snap na grade de 20 unidades
-            const snapX = Math.round(pt.x / 20) * 20;
-            const snapZ = Math.round(pt.z / 20) * 20;
+        const start = Math.min(z1, z2);
+        const end = Math.max(z1, z2);
+        for (let z = start; z <= end; z += 20) {
+            removeObjectAtSnap(x1, z);
+            const roadMesh = buildStraightRoadMesh();
+            roadMesh.position.set(x1, 0, z);
+            editorObjectsGroup.add(roadMesh);
+        }
+    }
 
+    saveEditorStateToMemory();
+}
+
+function cancelMovingObject() {
+    if (movingObject && originalPosition) {
+        movingObject.position.copy(originalPosition);
+        movingObject = null;
+        originalPosition = null;
+        editorOrbit.enabled = true;
+    }
+}
+
+// ATALHO DE TECLADO PARA UNDO E ROTAÇÃO RÁPIDA
+window.addEventListener('keydown', (e) => {
+    if (document.getElementById('editor-screen').classList.contains('active')) {
+        if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
+            undoLastAction();
+        }
+        // Atalho 'R' ou Espaço para Rotacionar Objeto
+        if (e.key.toLowerCase() === 'r' || e.code === 'Space') {
+            if (movingObject) {
+                movingObject.rotation.y += Math.PI / 2; // Incrementar 90°
+            } else {
+                const pt = getGroundIntersectPoint(e);
+                if (pt) {
+                    const intersected = getIntersectedObject(e);
+                    if (intersected) {
+                        pushUndoState();
+                        intersected.rotation.y += Math.PI / 4; // Incrementar 45°
+                        saveEditorStateToMemory();
+                    }
+                }
+            }
+        }
+    }
+});
+
+editorRenderer.domElement.addEventListener('contextmenu', (e) => {
+    e.preventDefault();
+    if (movingObject) {
+        cancelMovingObject();
+    }
+});
+
+editorRenderer.domElement.addEventListener('pointerdown', (e) => {
+    if (e.target !== editorRenderer.domElement) return;
+
+    if (e.button === 2) { // Clique Direito: Cancelar Ação de Mover
+        cancelMovingObject();
+        return;
+    }
+
+    const pt = getGroundIntersectPoint(e);
+    if (!pt) return;
+
+    // 1. FERRAMENTA MOVER (TRANSLADAR)
+    if (currentSelectedTool === 'move') {
+        if (movingObject) {
+            // Confirmar Posição
+            pushUndoState();
+            movingObject = null;
+            originalPosition = null;
+            editorOrbit.enabled = true;
+            saveEditorStateToMemory();
+        } else {
+            const intersected = getIntersectedObject(e);
+            if (intersected) {
+                movingObject = intersected;
+                originalPosition = intersected.position.clone();
+                editorOrbit.enabled = false;
+            }
+        }
+    }
+    // 2. FERRAMENTA ROTACIONAR
+    else if (currentSelectedTool === 'rotate') {
+        const intersected = getIntersectedObject(e);
+        if (intersected) {
+            pushUndoState();
+            intersected.rotation.y += Math.PI / 4; // Rotação incremental em 45º
+            saveEditorStateToMemory();
+        }
+    }
+    // 3. FERRAMENTA REDIMENSIONAR (ESCALA)
+    else if (currentSelectedTool === 'scale') {
+        const intersected = getIntersectedObject(e);
+        if (intersected) {
+            pushUndoState();
+            movingObject = intersected;
+            isScaling = true;
+            scaleStartPoint.copy(pt);
+            scaleStartValue.copy(intersected.scale);
+            editorOrbit.enabled = false;
+        }
+    }
+    // 4. FERRAMENTA LINHA DE PISTA
+    else if (currentSelectedTool === 'road-line') {
+        isDrawingLine = true;
+        editorOrbit.enabled = false;
+        startSnapX = Math.round(pt.x / 20) * 20;
+        startSnapZ = Math.round(pt.z / 20) * 20;
+
+        linePreviewGeo.setFromPoints([
+            new THREE.Vector3(startSnapX, 0.5, startSnapZ),
+            new THREE.Vector3(startSnapX, 0.5, startSnapZ)
+        ]);
+        linePreviewMesh.visible = true;
+    }
+    // 5. FERRAMENTA BORRACHA (REMOVER COM UNDO)
+    else if (currentSelectedTool === 'eraser') {
+        const intersected = getIntersectedObject(e);
+        if (intersected) {
+            pushUndoState();
+            editorObjectsGroup.remove(intersected);
+            saveEditorStateToMemory();
+        }
+    } 
+    // 6. CRIAÇÃO DE NOVOS OBJETOS
+    else {
+        pushUndoState();
+        const snapX = Math.round(pt.x / 20) * 20;
+        const snapZ = Math.round(pt.z / 20) * 20;
+
+        removeObjectAtSnap(snapX, snapZ);
+
+        if (currentSelectedTool === 'road') {
+            const roadMesh = buildStraightRoadMesh();
+            roadMesh.position.set(snapX, 0, snapZ);
+            editorObjectsGroup.add(roadMesh);
+        } else {
             const newMesh = createCityMeshObject(currentSelectedTool);
             newMesh.position.set(snapX, 0, snapZ);
             editorObjectsGroup.add(newMesh);
-
-            saveEditorStateToMemory();
         }
+
+        saveEditorStateToMemory();
+    }
+});
+
+editorRenderer.domElement.addEventListener('pointermove', (e) => {
+    const pt = getGroundIntersectPoint(e);
+    if (!pt) return;
+
+    // Atualização da Transladação
+    if (movingObject && currentSelectedTool === 'move') {
+        const snapX = Math.round(pt.x / 20) * 20;
+        const snapZ = Math.round(pt.z / 20) * 20;
+        movingObject.position.set(snapX, movingObject.position.y, snapZ);
+    }
+
+    // Atualização do Redimensionamento (Escala)
+    if (isScaling && movingObject && currentSelectedTool === 'scale') {
+        const deltaX = (pt.x - scaleStartPoint.x) * 0.05;
+        const deltaZ = (pt.z - scaleStartPoint.z) * 0.05;
+        const factor = 1 + (deltaX - deltaZ);
+
+        // Para evitar distorções nas pistas, restringe a escala uniformemente no plano X/Z
+        const newScaleX = Math.max(0.2, scaleStartValue.x * factor);
+        const newScaleZ = Math.max(0.2, scaleStartValue.z * factor);
+
+        if (movingObject.userData.type === 'road') {
+            movingObject.scale.set(newScaleX, scaleStartValue.y, newScaleZ);
+        } else {
+            movingObject.scale.set(newScaleX, scaleStartValue.y * factor, newScaleZ);
+        }
+    }
+
+    // Linha de Pista Guia
+    if (isDrawingLine && currentSelectedTool === 'road-line') {
+        let currentSnapX = Math.round(pt.x / 20) * 20;
+        let currentSnapZ = Math.round(pt.z / 20) * 20;
+
+        const dx = Math.abs(currentSnapX - startSnapX);
+        const dz = Math.abs(currentSnapZ - startSnapZ);
+
+        if (dx >= dz) currentSnapZ = startSnapZ;
+        else currentSnapX = startSnapX;
+
+        linePreviewGeo.setFromPoints([
+            new THREE.Vector3(startSnapX, 0.5, startSnapZ),
+            new THREE.Vector3(currentSnapX, 0.5, currentSnapZ)
+        ]);
+    }
+});
+
+editorRenderer.domElement.addEventListener('pointerup', (e) => {
+    if (isScaling) {
+        isScaling = false;
+        movingObject = null;
+        editorOrbit.enabled = true;
+        saveEditorStateToMemory();
+    }
+
+    if (isDrawingLine && currentSelectedTool === 'road-line') {
+        const pt = getGroundIntersectPoint(e);
+        if (pt) {
+            let endSnapX = Math.round(pt.x / 20) * 20;
+            let endSnapZ = Math.round(pt.z / 20) * 20;
+
+            const dx = Math.abs(endSnapX - startSnapX);
+            const dz = Math.abs(endSnapZ - startSnapZ);
+
+            if (dx >= dz) endSnapZ = startSnapZ;
+            else endSnapX = startSnapX;
+
+            createRoadLine(startSnapX, startSnapZ, endSnapX, endSnapZ);
+        }
+
+        isDrawingLine = false;
+        linePreviewMesh.visible = false;
+        editorOrbit.enabled = true;
     }
 });
 
 function saveEditorStateToMemory() {
     customCityData = [];
     editorObjectsGroup.children.forEach(obj => {
-        customCityData.push({
-            type: obj.userData.type,
-            x: obj.position.x,
-            y: obj.position.y,
-            z: obj.position.z
-        });
+        if (obj.userData && obj.userData.type) {
+            customCityData.push({
+                type: obj.userData.type,
+                x: obj.position.x,
+                y: obj.position.y,
+                z: obj.position.z,
+                rotationY: obj.rotation.y,
+                scaleX: obj.scale.x,
+                scaleY: obj.scale.y,
+                scaleZ: obj.scale.z
+            });
+        }
     });
 }
 
@@ -1007,15 +1338,28 @@ function saveCityToLocalStorage() {
     setTimeout(() => statusEl.innerText = "", 3000);
 }
 
+document.getElementById('btn-export-city-json').addEventListener('click', () => {
+    saveEditorStateToMemory();
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(customCityData, null, 2));
+    const downloadAnchor = document.createElement('a');
+    downloadAnchor.setAttribute("href", dataStr);
+    downloadAnchor.setAttribute("download", "cidade_nice_man.json");
+    document.body.appendChild(downloadAnchor);
+    downloadAnchor.click();
+    downloadAnchor.remove();
+});
+
 function loadSavedCityIntoEditor() {
     const saved = localStorage.getItem('custom_city_data');
     if (saved) {
         customCityData = JSON.parse(saved);
         editorObjectsGroup.clear();
         customCityData.forEach(item => {
-            const mesh = createCityMeshObject(item.type);
+            const mesh = item.type === 'road' ? buildStraightRoadMesh() : createCityMeshObject(item.type);
             if (mesh) {
-                mesh.position.set(item.x, item.y, item.z);
+                mesh.position.set(item.x, item.y || 0, item.z);
+                if (item.rotationY !== undefined) mesh.rotation.y = item.rotationY;
+                if (item.scaleX !== undefined) mesh.scale.set(item.scaleX, item.scaleY || 1, item.scaleZ || item.scaleX);
                 editorObjectsGroup.add(mesh);
             }
         });
@@ -1025,23 +1369,24 @@ function loadSavedCityIntoEditor() {
 document.getElementById('btn-save-city').addEventListener('click', saveCityToLocalStorage);
 
 document.getElementById('btn-clear-city').addEventListener('click', () => {
+    pushUndoState();
     editorObjectsGroup.clear();
     saveEditorStateToMemory();
     localStorage.removeItem('custom_city_data');
-    document.getElementById('editor-status').innerText = "🗑️️ Cidade Limpa!";
+    document.getElementById('editor-status').innerText = "🗑 Cidade Limpa!";
     setTimeout(() => document.getElementById('editor-status').innerText = "", 3000);
 });
 
 document.getElementById('btn-apply-city-to-game').addEventListener('click', () => {
     saveCityToLocalStorage();
-    loadCityIntoGame();
+    loadCityFromData(customCityData, "Cidade Personalizada (Editor)");
     switchScreen('game-screen');
 });
 
 loadSavedCityIntoEditor();
 
 // ==========================================
-// 4. VARIÁVEIS DE ESTADO DO JOGO PRINCIPAL
+// 5. VARIÁVEIS DE ESTADO DO JOGO PRINCIPAL
 // ==========================================
 let isGameMode = false;
 const pressedKeys = {};
@@ -1155,7 +1500,9 @@ function createDefaultCharacter() {
 }
 
 createDefaultCharacter();
-loadCityIntoGame();
+
+// INICIAR OBRIGATORIAMENTE COM A CIDADE BÁSICA PROCEDURAL
+buildProceduralCity();
 
 // TECLADO
 window.addEventListener('keydown', (e) => {
