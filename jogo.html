@@ -301,6 +301,26 @@
             color: white;
             border-color: var(--primary-blue-dark);
         }
+        
+        .transform-actions {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 4px;
+            margin-top: 4px;
+        }
+        .btn-sub-action {
+            background: #475569;
+            color: white;
+            border: none;
+            border-radius: 3px;
+            padding: 5px;
+            font-size: 10px;
+            font-weight: bold;
+            transition: 0.2s;
+        }
+        .btn-sub-action:hover {
+            background: #334155;
+        }
     </style>
 </head>
 <body>
@@ -543,7 +563,7 @@
 
 <!-- TELA 2: CRIADOR / EDITOR DE CIDADE -->
 <div id="editor-screen" class="screen">
-    <div class="floating-panel" id="editor-panel" style="top: 50px; left: 10px; width: 300px;">
+    <div class="floating-panel" id="editor-panel" style="top: 50px; left: 10px; width: 310px;">
         <div class="panel-header" onmousedown="startDrag(event, 'editor-panel')">
             <span>🏗️ Ferramentas do Editor de Cidade</span>
             <button class="minimize-btn" onclick="toggleMinimize('editor-panel')">_</button>
@@ -552,31 +572,46 @@
             <span class="status-text">Selecione uma ferramenta e interaja com o terreno:</span>
             
             <div class="editor-tools">
-                <button class="tool-btn active" data-tool="road-line">✏️ Tracejar Linha de Pista</button>
-                <button class="tool-btn" data-tool="road">🛣️ Pista Individual</button>
+                <button class="tool-btn active" data-tool="road-line">✏️ Linha de Pista</button>
+                <button class="tool-btn" data-tool="road">🛣️ Pista Reta</button>
+                <button class="tool-btn" data-tool="road-curve-right">↪️ Curva C (Direita)</button>
+                <button class="tool-btn" data-tool="road-curve-left">↩️ Curva C (Esquerda)</button>
                 <button class="tool-btn" data-tool="move">✋ Mover Objeto</button>
-                <button class="tool-btn" data-tool="rotate">🔄 Girar (Teclas R/Espaço)</button>
+                <button class="tool-btn" data-tool="rotate">🔄 Girar</button>
                 <button class="tool-btn" data-tool="scale">📐 Redimensionar</button>
                 <button class="tool-btn" data-tool="tree">🌲 Árvore</button>
                 <button class="tool-btn" data-tool="building-small">🏠 Prédio Baixo</button>
                 <button class="tool-btn" data-tool="building-tall">🏢 Arranha-Céu</button>
                 <button class="tool-btn" data-tool="light">💡 Poste de Luz</button>
-                <button class="tool-btn" data-tool="eraser" style="color: #c62828; grid-column: span 2;">❌ Borracha / Remover</button>
+                <button class="tool-btn" data-tool="eraser" style="color: #c62828;">❌ Borracha</button>
+            </div>
+
+            <!-- CONTROLES DE TRANSFORMAÇÃO RÁPIDA -->
+            <div class="control-block" style="background: #f1f5f9; padding: 6px; border-radius: 4px; border: 1px solid var(--border-color); margin-top: 4px;">
+                <label style="font-weight: bold; color: var(--primary-blue-dark);">🔄 Rotação & Espelhamento (Flip):</label>
+                <div class="transform-actions">
+                    <button id="btn-rot-90-cw" class="btn-sub-action">↻ +90° (R)</button>
+                    <button id="btn-rot-90-ccw" class="btn-sub-action">↺ -90°</button>
+                    <button id="btn-rot-45-cw" class="btn-sub-action">↻ +45°</button>
+                    <button id="btn-rot-45-ccw" class="btn-sub-action">↺ -45°</button>
+                    <button id="btn-flip-x" class="btn-sub-action" style="background: #0288d1;">↔ Flip X (Tecla X)</button>
+                    <button id="btn-flip-z" class="btn-sub-action" style="background: #0288d1;">↕ Flip Z (Tecla Z)</button>
+                </div>
             </div>
 
             <!-- INFORMAÇÃO DA PISTA -->
-            <div id="road-stripe-controls" class="control-block" style="background: #e3f2fd; border: 1px solid #90caf9; padding: 6px; border-radius: 4px; margin-top: 4px;">
-                <label style="font-weight: bold; color: #1565c0;">🛣️ Posicionamento Manual:</label>
-                <span class="status-text" style="margin-top: 2px;">Clique esquerdo para adicionar/confirmar. Clique direito cancela a movimentação. Pressione R ou Espaço para girar.</span>
+            <div id="road-stripe-controls" class="control-block" style="background: #e3f2fd; border: 1px solid #90caf9; padding: 6px; border-radius: 4px;">
+                <label style="font-weight: bold; color: #1565c0;">🛣️ Atalhos Rápidos:</label>
+                <span class="status-text" style="margin-top: 2px;">• <b>Clique esquerdo:</b> Inserir/Confirmar<br>• <b>Clique direito:</b> Cancelar<br>• <b>R:</b> Girar +90° | <b>X:</b> Flip H | <b>Z:</b> Flip V</span>
             </div>
 
-            <hr style="border:0; border-top:1px solid var(--border-color); margin: 4px 0;">
+            <hr style="border:0; border-top:1px solid var(--border-color); margin: 2px 0;">
 
-            <button id="btn-undo-city" class="btn-action" style="background: #e65100;">↩️ Desfazer (Undo)</button>
+            <button id="btn-undo-city" class="btn-action" style="background: #e65100;">↩️ Desfazer (Undo - Ctrl+Z)</button>
             <button id="btn-save-city" class="btn-action" style="background: #2e7d32;">💾 Salvar no LocalStorage</button>
             <button id="btn-export-city-json" class="btn-action" style="background: #7b1fa2;">📥 Baixar Arquivo JSON</button>
             <button id="btn-clear-city" class="btn-action" style="background: #c62828;">🗑️ Limpar Tudo</button>
-            <button id="btn-apply-city-to-game" class="btn-action" style="background: #1565c0; margin-top: 6px;">🎮 Salvar e Jogar Nela</button>
+            <button id="btn-apply-city-to-game" class="btn-action" style="background: #1565c0; margin-top: 4px;">🎮 Salvar e Jogar Nela</button>
 
             <span id="editor-status" class="status-text" style="text-align: center; font-weight: bold; margin-top: 4px; color: #2e7d32;"></span>
         </div>
@@ -748,7 +783,7 @@ function recenterCameraOnCharacter() {
 }
 
 // ==========================================
-// 2. CONSTRUÇÃO DA CIDADE
+// 2. CONSTRUÇÃO DA CIDADE NA CENA PRINCIPAL
 // ==========================================
 function buildProceduralCity() {
     cityGroup.clear();
@@ -810,7 +845,12 @@ function loadCityFromData(cityElements, sourceName = "Cidade Personalizada") {
     cityGroup.add(ground);
 
     cityElements.forEach(item => {
-        const mesh = item.type === 'road' ? buildStraightRoadMesh() : createCityMeshObject(item.type);
+        let mesh;
+        if (item.type === 'road') mesh = buildStraightRoadMesh();
+        else if (item.type === 'road-curve-right') mesh = buildSCurveRoadMesh(false);
+        else if (item.type === 'road-curve-left') mesh = buildSCurveRoadMesh(true);
+        else mesh = createCityMeshObject(item.type);
+
         if (mesh) {
             mesh.position.set(item.x, item.y || 0, item.z);
             if (item.rotationY !== undefined) mesh.rotation.y = item.rotationY;
@@ -852,12 +892,12 @@ document.getElementById('file-input-city-json').addEventListener('change', (e) =
 });
 
 // ==========================================
-// 3. GERADOR DE PISTA RETILÍNEA SIMPLES
+// 3. GERADORES DE PISTAS (RETA E CURVA C DE 90°)
 // ==========================================
 function buildStraightRoadMesh() {
     const group = new THREE.Group();
 
-    // Asfalto elevado para evitar z-fighting (y=0.05)
+    // Asfalto
     const roadGeo = new THREE.PlaneGeometry(20, 20);
     const roadMat = new THREE.MeshStandardMaterial({ color: 0x333333, roughness: 0.8 });
     const road = new THREE.Mesh(roadGeo, roadMat);
@@ -866,7 +906,7 @@ function buildStraightRoadMesh() {
     road.receiveShadow = true;
     group.add(road);
 
-    // Faixa amarela simples elevada (y=0.1)
+    // Faixa amarela central
     const yellowMat = new THREE.MeshBasicMaterial({ color: 0xffeb3b });
     const stripeGeo = new THREE.PlaneGeometry(20, 1.8);
     const stripe = new THREE.Mesh(stripeGeo, yellowMat);
@@ -878,8 +918,49 @@ function buildStraightRoadMesh() {
     return group;
 }
 
+// CURVA EM "C" DE 90 GRAUS
+function buildSCurveRoadMesh(isLeftCurve = false) {
+    const group = new THREE.Group();
+    const width = 20;
+
+    // Asfalto Quadrado do Bloco
+    const roadGeo = new THREE.PlaneGeometry(width, width);
+    const roadMat = new THREE.MeshStandardMaterial({ color: 0x333333, roughness: 0.8 });
+    const road = new THREE.Mesh(roadGeo, roadMat);
+    road.rotation.x = -Math.PI / 2;
+    road.position.y = 0.05;
+    road.receiveShadow = true;
+    group.add(road);
+
+    // Centro do Arco para formar a Curva C (em formato de L/90°)
+    const centerOffset = isLeftCurve ? -width / 2 : width / 2;
+    const startAngle = isLeftCurve ? 0 : Math.PI;
+    const endAngle = isLeftCurve ? Math.PI / 2 : Math.PI / 2;
+
+    const arcCurve = new THREE.ArcCurve(
+        centerOffset, -width / 2, // Centro do raio
+        width / 2,                // Raio da faixa central
+        startAngle, endAngle, 
+        !isLeftCurve              // Sentido horário / anti-horário
+    );
+
+    const points = arcCurve.getPoints(24);
+    const points3D = points.map(p => new THREE.Vector3(p.x, 0.1, p.y));
+    const path = new THREE.CatmullRomCurve3(points3D);
+
+    // Tubo achatado para formar a faixa amarela curvada
+    const tubeGeo = new THREE.TubeGeometry(path, 24, 0.9, 8, false);
+    const yellowMat = new THREE.MeshBasicMaterial({ color: 0xffeb3b });
+    const stripe = new THREE.Mesh(tubeGeo, yellowMat);
+    stripe.scale.y = 0.1; 
+    group.add(stripe);
+
+    group.userData = { type: isLeftCurve ? 'road-curve-left' : 'road-curve-right' };
+    return group;
+}
+
 // ==========================================
-// 4. EDITOR DE CIDADE COM AÇÕES AVANÇADAS (MOVE/ROTATE/SCALE/UNDO)
+// 4. EDITOR DE CIDADE COM AÇÕES AVANÇADAS (MOVE/ROTATE/SCALE/FLIP)
 // ==========================================
 const editorContainer = document.getElementById('editor-screen');
 const editorScene = new THREE.Scene();
@@ -925,7 +1006,7 @@ let undoHistory = [];
 function pushUndoState() {
     saveEditorStateToMemory();
     undoHistory.push(JSON.stringify(customCityData));
-    if (undoHistory.length > 30) undoHistory.shift(); // Limite do histórico
+    if (undoHistory.length > 30) undoHistory.shift();
 }
 
 function undoLastAction() {
@@ -934,7 +1015,12 @@ function undoLastAction() {
         customCityData = JSON.parse(lastState);
         editorObjectsGroup.clear();
         customCityData.forEach(item => {
-            const mesh = item.type === 'road' ? buildStraightRoadMesh() : createCityMeshObject(item.type);
+            let mesh;
+            if (item.type === 'road') mesh = buildStraightRoadMesh();
+            else if (item.type === 'road-curve-right') mesh = buildSCurveRoadMesh(false);
+            else if (item.type === 'road-curve-left') mesh = buildSCurveRoadMesh(true);
+            else mesh = createCityMeshObject(item.type);
+
             if (mesh) {
                 mesh.position.set(item.x, item.y || 0, item.z);
                 if (item.rotationY !== undefined) mesh.rotation.y = item.rotationY;
@@ -943,7 +1029,7 @@ function undoLastAction() {
             }
         });
         const statusEl = document.getElementById('editor-status');
-        statusEl.innerText = "↩ Action Undone!";
+        statusEl.innerText = "↩ Ação Desfeita!";
         setTimeout(() => statusEl.innerText = "", 2000);
     }
 }
@@ -1031,8 +1117,9 @@ let isDrawingLine = false;
 let startSnapX = 0;
 let startSnapZ = 0;
 
-// Variáveis para Manipulação de Objetos (Mover, Rotacionar, Escalar)
+// Variáveis para Manipulação de Objetos (Mover, Rotacionar, Escalar, Espelhar)
 let movingObject = null;
+let lastHoveredObject = null;
 let originalPosition = null;
 let isScaling = false;
 let scaleStartPoint = new THREE.Vector3();
@@ -1111,27 +1198,68 @@ function cancelMovingObject() {
     }
 }
 
-// ATALHO DE TECLADO PARA UNDO E ROTAÇÃO RÁPIDA
+// ==========================================
+// FUNÇÕES DE ROTAÇÃO EXPANDIDA & ESPELHAMENTO (FLIP)
+// ==========================================
+function getTargetTransformObject() {
+    return movingObject || lastHoveredObject;
+}
+
+function rotateTargetObject(angleRad) {
+    const target = getTargetTransformObject();
+    if (target) {
+        pushUndoState();
+        target.rotation.y += angleRad;
+        saveEditorStateToMemory();
+    }
+}
+
+function flipTargetObjectX() {
+    const target = getTargetTransformObject();
+    if (target) {
+        pushUndoState();
+        target.scale.x *= -1;
+        saveEditorStateToMemory();
+    }
+}
+
+function flipTargetObjectZ() {
+    const target = getTargetTransformObject();
+    if (target) {
+        pushUndoState();
+        target.scale.z *= -1;
+        saveEditorStateToMemory();
+    }
+}
+
+// OUVINTES DE EVENTOS PARA OS BOTÕES DE INVERSÃO E ROTAÇÃO NA INTERFACE
+document.getElementById('btn-rot-90-cw').addEventListener('click', () => rotateTargetObject(Math.PI / 2));
+document.getElementById('btn-rot-90-ccw').addEventListener('click', () => rotateTargetObject(-Math.PI / 2));
+document.getElementById('btn-rot-45-cw').addEventListener('click', () => rotateTargetObject(Math.PI / 4));
+document.getElementById('btn-rot-45-ccw').addEventListener('click', () => rotateTargetObject(-Math.PI / 4));
+document.getElementById('btn-flip-x').addEventListener('click', flipTargetObjectX);
+document.getElementById('btn-flip-z').addEventListener('click', flipTargetObjectZ);
+
+// ATALHOS DE TECLADO EXPANDIDOS (R, X, Z, CTRL+Z)
 window.addEventListener('keydown', (e) => {
     if (document.getElementById('editor-screen').classList.contains('active')) {
         if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
             undoLastAction();
+            return;
         }
-        // Atalho 'R' ou Espaço para Rotacionar Objeto
+
+        if (e.key.toLowerCase() === 'x') {
+            flipTargetObjectX();
+            return;
+        }
+
+        if (e.key.toLowerCase() === 'z' && !e.ctrlKey && !e.metaKey) {
+            flipTargetObjectZ();
+            return;
+        }
+
         if (e.key.toLowerCase() === 'r' || e.code === 'Space') {
-            if (movingObject) {
-                movingObject.rotation.y += Math.PI / 2; // Incrementar 90°
-            } else {
-                const pt = getGroundIntersectPoint(e);
-                if (pt) {
-                    const intersected = getIntersectedObject(e);
-                    if (intersected) {
-                        pushUndoState();
-                        intersected.rotation.y += Math.PI / 4; // Incrementar 45°
-                        saveEditorStateToMemory();
-                    }
-                }
-            }
+            rotateTargetObject(Math.PI / 2);
         }
     }
 });
@@ -1146,7 +1274,7 @@ editorRenderer.domElement.addEventListener('contextmenu', (e) => {
 editorRenderer.domElement.addEventListener('pointerdown', (e) => {
     if (e.target !== editorRenderer.domElement) return;
 
-    if (e.button === 2) { // Clique Direito: Cancelar Ação de Mover
+    if (e.button === 2) { 
         cancelMovingObject();
         return;
     }
@@ -1157,7 +1285,6 @@ editorRenderer.domElement.addEventListener('pointerdown', (e) => {
     // 1. FERRAMENTA MOVER (TRANSLADAR)
     if (currentSelectedTool === 'move') {
         if (movingObject) {
-            // Confirmar Posição
             pushUndoState();
             movingObject = null;
             originalPosition = null;
@@ -1167,6 +1294,7 @@ editorRenderer.domElement.addEventListener('pointerdown', (e) => {
             const intersected = getIntersectedObject(e);
             if (intersected) {
                 movingObject = intersected;
+                lastHoveredObject = intersected;
                 originalPosition = intersected.position.clone();
                 editorOrbit.enabled = false;
             }
@@ -1176,9 +1304,8 @@ editorRenderer.domElement.addEventListener('pointerdown', (e) => {
     else if (currentSelectedTool === 'rotate') {
         const intersected = getIntersectedObject(e);
         if (intersected) {
-            pushUndoState();
-            intersected.rotation.y += Math.PI / 4; // Rotação incremental em 45º
-            saveEditorStateToMemory();
+            lastHoveredObject = intersected;
+            rotateTargetObject(Math.PI / 4);
         }
     }
     // 3. FERRAMENTA REDIMENSIONAR (ESCALA)
@@ -1187,6 +1314,7 @@ editorRenderer.domElement.addEventListener('pointerdown', (e) => {
         if (intersected) {
             pushUndoState();
             movingObject = intersected;
+            lastHoveredObject = intersected;
             isScaling = true;
             scaleStartPoint.copy(pt);
             scaleStartValue.copy(intersected.scale);
@@ -1206,16 +1334,17 @@ editorRenderer.domElement.addEventListener('pointerdown', (e) => {
         ]);
         linePreviewMesh.visible = true;
     }
-    // 5. FERRAMENTA BORRACHA (REMOVER COM UNDO)
+    // 5. FERRAMENTA BORRACHA
     else if (currentSelectedTool === 'eraser') {
         const intersected = getIntersectedObject(e);
         if (intersected) {
             pushUndoState();
             editorObjectsGroup.remove(intersected);
+            if (lastHoveredObject === intersected) lastHoveredObject = null;
             saveEditorStateToMemory();
         }
     } 
-    // 6. CRIAÇÃO DE NOVOS OBJETOS
+    // 6. CRIAÇÃO DE NOVOS OBJETOS E CURVAS (Remoção APENAS ao inserir novo bloco)
     else {
         pushUndoState();
         const snapX = Math.round(pt.x / 20) * 20;
@@ -1223,14 +1352,16 @@ editorRenderer.domElement.addEventListener('pointerdown', (e) => {
 
         removeObjectAtSnap(snapX, snapZ);
 
-        if (currentSelectedTool === 'road') {
-            const roadMesh = buildStraightRoadMesh();
-            roadMesh.position.set(snapX, 0, snapZ);
-            editorObjectsGroup.add(roadMesh);
-        } else {
-            const newMesh = createCityMeshObject(currentSelectedTool);
+        let newMesh;
+        if (currentSelectedTool === 'road') newMesh = buildStraightRoadMesh();
+        else if (currentSelectedTool === 'road-curve-right') newMesh = buildSCurveRoadMesh(false);
+        else if (currentSelectedTool === 'road-curve-left') newMesh = buildSCurveRoadMesh(true);
+        else newMesh = createCityMeshObject(currentSelectedTool);
+
+        if (newMesh) {
             newMesh.position.set(snapX, 0, snapZ);
             editorObjectsGroup.add(newMesh);
+            lastHoveredObject = newMesh;
         }
 
         saveEditorStateToMemory();
@@ -1241,31 +1372,30 @@ editorRenderer.domElement.addEventListener('pointermove', (e) => {
     const pt = getGroundIntersectPoint(e);
     if (!pt) return;
 
-    // Atualização da Transladação
+    const intersected = getIntersectedObject(e);
+    if (intersected) lastHoveredObject = intersected;
+
     if (movingObject && currentSelectedTool === 'move') {
         const snapX = Math.round(pt.x / 20) * 20;
         const snapZ = Math.round(pt.z / 20) * 20;
         movingObject.position.set(snapX, movingObject.position.y, snapZ);
     }
 
-    // Atualização do Redimensionamento (Escala)
     if (isScaling && movingObject && currentSelectedTool === 'scale') {
         const deltaX = (pt.x - scaleStartPoint.x) * 0.05;
         const deltaZ = (pt.z - scaleStartPoint.z) * 0.05;
         const factor = 1 + (deltaX - deltaZ);
 
-        // Para evitar distorções nas pistas, restringe a escala uniformemente no plano X/Z
-        const newScaleX = Math.max(0.2, scaleStartValue.x * factor);
-        const newScaleZ = Math.max(0.2, scaleStartValue.z * factor);
+        const newScaleX = Math.max(0.2, Math.abs(scaleStartValue.x) * factor) * Math.sign(scaleStartValue.x || 1);
+        const newScaleZ = Math.max(0.2, Math.abs(scaleStartValue.z) * factor) * Math.sign(scaleStartValue.z || 1);
 
-        if (movingObject.userData.type === 'road') {
+        if (movingObject.userData.type.startsWith('road')) {
             movingObject.scale.set(newScaleX, scaleStartValue.y, newScaleZ);
         } else {
             movingObject.scale.set(newScaleX, scaleStartValue.y * factor, newScaleZ);
         }
     }
 
-    // Linha de Pista Guia
     if (isDrawingLine && currentSelectedTool === 'road-line') {
         let currentSnapX = Math.round(pt.x / 20) * 20;
         let currentSnapZ = Math.round(pt.z / 20) * 20;
@@ -1355,7 +1485,12 @@ function loadSavedCityIntoEditor() {
         customCityData = JSON.parse(saved);
         editorObjectsGroup.clear();
         customCityData.forEach(item => {
-            const mesh = item.type === 'road' ? buildStraightRoadMesh() : createCityMeshObject(item.type);
+            let mesh;
+            if (item.type === 'road') mesh = buildStraightRoadMesh();
+            else if (item.type === 'road-curve-right') mesh = buildSCurveRoadMesh(false);
+            else if (item.type === 'road-curve-left') mesh = buildSCurveRoadMesh(true);
+            else mesh = createCityMeshObject(item.type);
+
             if (mesh) {
                 mesh.position.set(item.x, item.y || 0, item.z);
                 if (item.rotationY !== undefined) mesh.rotation.y = item.rotationY;
@@ -1501,10 +1636,10 @@ function createDefaultCharacter() {
 
 createDefaultCharacter();
 
-// INICIAR OBRIGATORIAMENTE COM A CIDADE BÁSICA PROCEDURAL
+// INICIAR COM A CIDADE PROCEDURAL
 buildProceduralCity();
 
-// TECLADO
+// TECLADO DO JOGO
 window.addEventListener('keydown', (e) => {
     if (e.target.tagName !== 'INPUT') {
         pressedKeys[e.code] = true;
@@ -2009,7 +2144,7 @@ function animate() {
 
 animate();
 
-// REDIMENSIONAMENTO
+// REDIMENSIONAMENTO DE TELAS
 window.onGameScreenResize = () => {
     camera.aspect = window.innerWidth / (window.innerHeight - 120);
     camera.updateProjectionMatrix();
